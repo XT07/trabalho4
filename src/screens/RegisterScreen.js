@@ -1,27 +1,33 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
+import {auth} from '../config/firebase';
+import { createUserWithEmailAndPassword } from "firebase/auth";
+;
 
-const LoginScreen = () => {
-  const [username, setUsername] = useState('');
+export default function RegisterScreen({navigation}){
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [message, setMessage] = useState('');
 
-  const handleLogin = () => {
-    if (username === 'usuario' && password === 'senha') {
-      setMessage('Login bem-sucedido!');
-    } else {
-      setMessage('Credenciais inválidas. Tente novamente.');
-    }
-  };
+  function handleRegister(){
+    createUserWithEmailAndPassword(auth, email, password)
+    .then(userCredential => {
+      alert('Usuário criado com sucesso!')
+    }) .catch((error) =>  {
+      alert('Erro ao criar usuário!')
+    });
+  }
+
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Login</Text>
+      <Text style={styles.title}>Registro</Text>
       <TextInput
         style={styles.input}
-        placeholder="Usuário"
-        value={username}
-        onChangeText={text => setUsername(text)}
+        placeholder="E-mail"
+        value={email}
+        onChangeText={text => setEmail(text)}
       />
       <TextInput
         style={styles.input}
@@ -30,7 +36,14 @@ const LoginScreen = () => {
         value={password}
         onChangeText={text => setPassword(text)}
       />
-      <Button title="Entrar" onPress={handleLogin} />
+      <TextInput
+        style={styles.input}
+        placeholder="Confirme a senha"
+        secureTextEntry={true}
+        value={confirmPassword}
+        onChangeText={text => setConfirmPassword(text)}
+      />
+      <Button title="Registrar" onPress={handleRegister} />
       <Text style={styles.message}>{message}</Text>
     </View>
   );
@@ -58,5 +71,3 @@ const styles = StyleSheet.create({
     color: 'red',
   },
 });
-
-export default LoginScreen;
