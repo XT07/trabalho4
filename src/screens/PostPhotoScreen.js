@@ -1,65 +1,142 @@
 import React, { useState } from 'react';
-import { View, Text, Image, Button } from 'react-native';
+import { Text, View, Image } from 'react-native';
+
 import * as ImagePicker from 'expo-image-picker';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { getFirestore, collection, addDoc } from 'firebase/firestore';
+import * as Animatable from 'react-native-animatable';
 
-import firebaseConfig from './firebaseConfig';
+import { addDoc, collection } from 'firebase/firestore';
+import { db, storage } from '../config/firebase';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 
-const ImageUploadComponent = () => {
-  const [selectedImage, setSelectedImage] = useState(null);
+import ButtonType from '../components/ButtonType';
+import FooterBar from '../components/FooterBar';
 
-  const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      console.error('Permission denied for accessing media library');
-      return;
-    }
+const PostImageScreen = () => {
+    const [getImage, setImage] = useState(null);
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      quality: 1,
-    });
+    const pickImage = async () => {
+        let result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.All,
+            allowsEditing: true,
+            aspect: [4, 3],
+            quality: 1,
+        });
 
-    if (!result.cancelled) {
-      setSelectedImage(result.uri);
-    }
-  };
+        console.log(result);
 
-  const uploadImageToFirebase = async () => {
-    if (!selectedImage) {
-      console.error('No image selected.');
-      return;
-    }
+        if (!result.canceled) {
+            setImage(result.assets[0].uri);
+        }
+    };
 
-    const storage = getStorage();
-    const storageRef = ref(storage, 'images/' + selectedImage.split('/').pop());
-    const response = await fetch(selectedImage);
-    const blob = await response.blob();
+    const uploadImageToFirebase = async () => {
+        try {
+            const response = await fetch(getImage);
+            const blob = await response.blob();
 
-    await uploadBytes(storageRef, blob);
+            const storageRef = ref(storage, 'images/' + Date.now());
+            const uploadTask = uploadBytes(storageRef, blob);
 
-    const downloadURL = await getDownloadURL(storageRef);
+            await uploadTask;
 
-    const db = getFirestore();
-    const imagesCollection = collection(db, 'images');
+            const imageURL = await getDownloadURL(storageRef);
+            setImageToFirebase(imageURL);
+        } catch (error) {
+            console.error('Error uploading image: ', error);
+        }
+    };
 
-    try {
-      await addDoc(imagesCollection, { imageUrl: downloadURL });
-      console.log('Image uploaded and Firestore document added successfully.');
-    } catch (error) {
-      console.error('Error adding Firestore document:', error);
-    }
-  };
+    const setImageToFirebase = async (imageURL) => {
+        try {
+            const ref = collection(db, 'images');
+            await addDoc(ref, { imageURL });
 
-  return (
-    <View>
-      <Button title="Pick an image from camera roll" onPress={pickImage} />
-      {selectedImage && <Image source={{ uri: selectedImage }} style={{ width: 200, height: 200 }} />}
-      <Button title="Upload Image" onPress={uploadImageToFirebase} />
-    </View>
-  );
-};
+            console.log('Image URL added to Firestore');
+            setImage(null);
+        } catch (error) {
+            console.error('Error adding image URL to Firestore: ', error);
+            setImage(null);
+        }
+    };
 
-export default ImageUploadComponent;
+    return (
+        <>
+            <Animatable.View
+                animation="fadeInLeftBig"
+                delay={100}
+                style={{
+                    flex: 1,
+                    alignItems: 'center',
+                    paddingTop: 30,
+                }}
+            >
+                <Text
+                    style={{
+                        fontSize: 25,
+                        borderBottomWidth: 1,
+                        borderBottomColor: '#000',
+                        paddingBottom: 5,
+                        fontWeight: 'bold',
+                        width: '90%',
+                        textAlign: 'center',
+                    }}
+                >
+                    Publicar Imagem
+                </Text>
+
+                <View
+                    style={{
+                        width: '100%',
+                        alignItems: 'center',
+                    }}
+                >
+
+                    {getImage
+                    ?
+                        <>
+                            <View
+                                style={{
+                                    marginTop: 10,
+                                }}
+                            >
+                                <Image source={{ uri: getImage }} style={{ width: 200, height: 200 }} />
+                            </View>
+                            <View
+                                style={{
+                                    width: '90%',
+                                    marginTop: 10,
+                                    marginBottom: 20,
+                                }}
+                            >
+                                <ButtonType
+                                    onPress={() => uploadImageToFirebase()}
+                                >
+                                    Enviar
+                                </ButtonType>
+                            </View>
+                        </>
+                    :
+                        <View
+                            style={{
+                                width: '90%',
+                                marginTop: 10,
+                                marginBottom: 20,
+                            }}
+                        >
+                            <ButtonType
+                                onPress={() => pickImage()}
+                            >
+                                Selecionar Imagem
+                            </ButtonType>
+                        </View>
+                    }
+
+                </View>
+                
+            </Animatable.View>
+            <FooterBar active={1} link={'HomeScreen'} />
+        </>
+    );
+}
+
+export default PostImageScreen;
