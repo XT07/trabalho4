@@ -5,13 +5,13 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Animatable from 'react-native-animatable';
 
 import { addDoc, collection } from 'firebase/firestore';
-import { db, storage } from '../config/firebase';
+import { db, storage } from '../configs/firebase';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 
 import ButtonType from '../components/ButtonType';
 import FooterBar from '../components/FooterBar';
 
-const PostImageScreen = () => {
+const PostImageScreen = ( {navigation} ) => {
     const [getImage, setImage] = useState(null);
 
     const pickImage = async () => {
